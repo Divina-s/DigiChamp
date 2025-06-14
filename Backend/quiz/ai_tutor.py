@@ -1,28 +1,24 @@
 import os
-import openai
+import google.generativeai as genai
+from dotenv import load_dotenv
 
-# Load API key from environment variable
-openai.api_key = os.getenv("OPENAI_API_KEY")
+# Load environment variables from .env file
+load_dotenv()
+
+# Configure the Gemini API key
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+
+# Initialize the model (use gemini-pro for chat)
+model = genai.GenerativeModel("gemini-pro")
 
 def ask_ai_tutor(question, topic_name=None):
-    """
-    Sends a prompt to OpenAI's API and returns a helpful answer.
-    """
-    prompt = f"You are an AI tutor. Help the student with this question: {question}"
-    if topic_name:
-        prompt += f" The topic is: {topic_name}."
-
     try:
-        response = openai.ChatCompletion.create(
-            model="gpt-4o-mini",  # or "gpt-4" or whichever model you have access to
-            messages=[
-                {"role": "system", "content": "You are a helpful AI tutor."},
-                {"role": "user", "content": prompt}
-            ],
-            max_tokens=150,
-            temperature=0.7,
-        )
-        answer = response.choices[0].message.content.strip()
-        return answer
+        prompt = f"You are an AI tutor. Help the student with this question: {question}"
+        if topic_name:
+            prompt += f" The topic is {topic_name}."
+
+        response = model.generate_content(prompt)
+
+        return response.text.strip()
     except Exception as e:
-        return f"Sorry, I couldn't answer your question because: {str(e)}"
+        return f"Sorry, I couldn't answer your question because:\n\n{str(e)}"

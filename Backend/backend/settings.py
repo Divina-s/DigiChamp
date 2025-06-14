@@ -130,3 +130,17 @@ REST_FRAMEWORK = {
         'rest_framework.authentication.TokenAuthentication',
     ]
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# Your Gmail address
+EMAIL_HOST_USER = 'divinamanye@gmail.com'
+
+# The 16-character app password generated from Google
+EMAIL_HOST_PASSWORD = 'f d k i f f u k w y h j x t n b'
+
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Optional but good practice
+

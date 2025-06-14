@@ -68,3 +68,32 @@ class SubmitAnswersView(APIView):
             "score_percentage": score,
             "assigned_level": level
         })
+
+
+from rest_framework.permissions import IsAuthenticated
+from .ai_tutor import ask_ai_tutor
+from .models import Topic
+# Remove or fix this line in quiz/views.py
+from .models import Topic, Quiz ,UserLevel
+
+
+class AITutorView(APIView):
+    
+
+    def post(self, request):
+        question = request.data.get("question")
+        topic_id = request.data.get("topic_id")
+
+        if not question:
+            return Response({"error": "Question is required."}, status=400)
+
+        topic_name = None
+        if topic_id:
+            try:
+                topic = Topic.objects.get(id=topic_id)
+                topic_name = topic.name
+            except Topic.DoesNotExist:
+                pass
+
+        answer = ask_ai_tutor(question, topic_name)
+        return Response({"answer": answer})
