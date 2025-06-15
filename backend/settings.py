@@ -126,10 +126,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-    ]
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
 }
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -137,10 +138,10 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 # Your Gmail address
-EMAIL_HOST_USER = 'divinamanye@gmail.com'
+EMAIL_HOST_USER = 'herblueprintafrica@gmail.com'
 
 # The 16-character app password generated from Google
-EMAIL_HOST_PASSWORD = 'f d k i f f u k w y h j x t n b'
+EMAIL_HOST_PASSWORD = 'mjfd eiqp qfbo itxn'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Optional but good practice
 

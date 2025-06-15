@@ -28,47 +28,45 @@ class QuizDetailView(APIView):
         serializer = QuizSerializer(quiz)
         return Response(serializer.data)
 
-class SubmitAnswersView(APIView):
+class SubmitSingleAnswerView(APIView):
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, quiz_id):
-        user_answers = request.data.get("answers", {})
-        correct_count = 0
-        total_questions = 0
+    def post(self, request):
+        user = request.user
+        question_id = request.data.get('question_id')
+        selected_option_id = request.data.get('selected_option_id')
+
+        if not question_id or not selected_option_id:
+            return Response({"error": "Question ID and selected option ID are required."}, status=400)
 
         try:
-            quiz = Quiz.objects.get(id=quiz_id)
-        except Quiz.DoesNotExist:
-            return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
+            question = Question.objects.get(id=question_id)
+            selected_option = Option.objects.get(id=selected_option_id, question=question)
+        except Question.DoesNotExist:
+            return Response({"error": "Question not found."}, status=404)
+        except Option.DoesNotExist:
+            return Response({"error": "Option not found for this question."}, status=404)
 
-        for question in quiz.questions.all():
-            total_questions += 1
-            selected_answer_id = user_answers.get(str(question.id))
-            if selected_answer_id:
-                try:
-                    selected_answer = Answer.objects.get(id=selected_answer_id)
-                    if selected_answer.is_correct:
-                        correct_count += 1
-                except Answer.DoesNotExist:
-                    pass
-
-        score = (correct_count / total_questions) * 100 if total_questions else 0
-        level = get_level_from_score(score)
-
-        user = request.user
-        user_level, created = UserLevel.objects.update_or_create(
+        # Save user's answer
+        Answer.objects.update_or_create(
             user=user,
-            topic=quiz.topic,
-            defaults={'level': level}
+            question=question,
+            defaults={'selected_option': selected_option}
         )
 
-        return Response({
-            "total_questions": total_questions,
-            "correct_answers": correct_count,
-            "score_percentage": score,
-            "assigned_level": level
-        })
+        # Check correctness
+        is_correct = selected_option.is_correct
 
+        # Get the correct option(s) for this question to send back
+        correct_options = question.options.filter(is_correct=True)
+        correct_answers = [{"id": opt.id, "text": opt.text} for opt in correct_options]
+
+        return Response({
+            "question_id": question.id,
+            "is_correct": is_correct,
+            "correct_answers": correct_answers,
+            "message": "Correct!" if is_correct else "Incorrect.",
+        })
 
 from rest_framework.permissions import IsAuthenticated
 from .ai_tutor import ask_ai_tutor
@@ -107,14 +105,17 @@ from .serializers import QuestionSerializer
 class QuizQuestionsByTopicAndLevel(APIView):
     def get(self, request):
         topic_id = request.GET.get('topic_id')
-        level = request.GET.get('level')
+        level = request.GET.get('level', '').lower()
+
+        if not topic_id or not level:
+            return Response({"error": "Topic ID and level are required."}, status=400)
 
         try:
             quiz = Quiz.objects.filter(topic_id=topic_id, level=level).first()
             if not quiz:
                 return Response({"error": "No quiz found for this topic and level."}, status=404)
 
-            questions = quiz.question_set.all()
+            questions = quiz.questions.all()
             serializer = QuestionSerializer(questions, many=True)
             return Response(serializer.data)
 

@@ -18,15 +18,28 @@ class LogoutView(APIView):
         request.user.auth_token.delete()
         return Response({"detail": "Logged out successfully."}, status=status.HTTP_200_OK)
 
-class CustomLoginView(ObtainAuthToken):
+from rest_framework_simplejwt.views import TokenObtainPairView
+from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import authenticate
+
+class CustomLoginView(TokenObtainPairView):
     def post(self, request, *args, **kwargs):
-        response = super().post(request, *args, **kwargs)
-        token = Token.objects.get(key=response.data['token'])
-        return Response({
-            'token': token.key,
-            'username': token.user.username,
-            'email': token.user.email,
-        })
+        user = authenticate(
+            username=request.data.get("username"),
+            password=request.data.get("password")
+        )
+        if user is not None:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh),
+                'username': user.username,
+                'email': user.email,
+            }, status=status.HTTP_200_OK)
+        return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
+
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
