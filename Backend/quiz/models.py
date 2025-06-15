@@ -1,18 +1,26 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+# Choices for quiz difficulty levels
+LEVEL_CHOICES = [
+    ('beginner', 'Beginner'),
+    ('intermediate', 'Intermediate'),
+    ('advanced', 'Advanced'),
+]
+
 class Topic(models.Model):
     name = models.CharField(max_length=100)
-    
+
     def __str__(self):
         return self.name
 
 class Quiz(models.Model):
     topic = models.ForeignKey(Topic, on_delete=models.CASCADE)
     title = models.CharField(max_length=200)
+    level = models.CharField(max_length=20, choices=LEVEL_CHOICES, default='beginner')  # Added level field
 
     def __str__(self):
-        return self.title
+        return f"{self.title} ({self.level})"
 
 class Question(models.Model):
     quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
@@ -37,8 +45,6 @@ class QuizAttempt(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.quiz.title}"
-    
-
 
 class UserLevel(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -46,8 +52,7 @@ class UserLevel(models.Model):
     level = models.CharField(max_length=50)  # e.g., 'Beginner', 'Intermediate', 'Advanced'
 
     def __str__(self):
-        return f"{self.user.username} - {self.topic.name} - {self.level}"    
-
+        return f"{self.user.username} - {self.topic.name} - {self.level}"
 
 class Answer(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)

@@ -97,3 +97,26 @@ class AITutorView(APIView):
 
         answer = ask_ai_tutor(question, topic_name)
         return Response({"answer": answer})
+    
+# views.py
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from .models import Quiz, Question
+from .serializers import QuestionSerializer
+
+class QuizQuestionsByTopicAndLevel(APIView):
+    def get(self, request):
+        topic_id = request.GET.get('topic_id')
+        level = request.GET.get('level')
+
+        try:
+            quiz = Quiz.objects.filter(topic_id=topic_id, level=level).first()
+            if not quiz:
+                return Response({"error": "No quiz found for this topic and level."}, status=404)
+
+            questions = quiz.question_set.all()
+            serializer = QuestionSerializer(questions, many=True)
+            return Response(serializer.data)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=500)
