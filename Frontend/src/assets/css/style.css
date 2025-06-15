@@ -1,0 +1,88 @@
+@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@theme {
+    --color-primary: #5D5CDE;
+    --color-purple-deep: #2D1B69;
+    --color-purple-gradient-start: #130122;
+    --color-purple-gradient-end: #3d1a6b;
+    --color-purple-main: #6366F1;
+    --color-purple-light: #8B5CF6;
+    --color-orange-gradient: #F59E0B;
+
+    --font-sans:  'Inter', 'system-ui', 'sans-serif';
+}
+        
+.brand-gradient {
+    background: linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.account-card {
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+
+.account-card:hover {
+    border-color: #5D5CDE;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(93, 92, 222, 0.15);
+}
+
+.account-card.selected {
+    border-color: #5D5CDE;
+    background-color: rgba(93, 92, 222, 0.05);
+}
+
+.social-btn {
+    transition: all 0.2s ease;
+}
+
+.social-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.form-input {
+    transition: all 0.2s ease;
+}
+
+.form-input:focus {
+    border-color: #5D5CDE;
+    box-shadow: 0 0 0 3px rgba(93, 92, 222, 0.1);
+}
+
+.signup-btn {
+    background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%);
+    transition: all 0.3s ease;
+}
+
+.signup-btn:hover {
+    background: linear-gradient(135deg, #6D28D9 0%, #4C1D95 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, #8B5CF6 0%, #F59E0B 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    }
+    
+    .topic-card {
+    transition: all 0.2s ease-in-out;
+    }
+    
+    .topic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+    
+    .topic-card.selected {
+    background: linear-gradient(135deg, #e0c6f0 0%, #e0c6f0 100%);
+    border: 2px solid #261649;
+    }
