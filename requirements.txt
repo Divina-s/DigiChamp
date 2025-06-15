@@ -2,3 +2,4 @@ django
 djangorestframework
 google-generativeai
 djangorestframework-simplejwt
+gunicorn
