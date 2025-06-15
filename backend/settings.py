@@ -26,7 +26,12 @@ import os
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ["digichamp-backend.onrender.com", "localhost", "127.0.0.1"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://digichamp-backend.onrender.com"
+]
+
 
 
 # Application definition
@@ -42,9 +47,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'quiz',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -146,3 +153,4 @@ EMAIL_HOST_PASSWORD = 'mjfd eiqp qfbo itxn'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Optional but good practice
 
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development/testing
