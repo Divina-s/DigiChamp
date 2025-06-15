@@ -1,6 +1,4 @@
 # DigiChamp
-DigiChamp is an interactive gamefied web application designed to teach digital literacy to secondary school students of all academic backgrounds.
-# DigiChamp
 
 DigiChamp is a web-based, AI-powered quiz game designed to improve **digital literacy** among secondary school students across various academic tracks (Science, Arts, and Commercial). Through gamification, chatbot assistance, and a level-based system, DigiChamp makes learning digital skills fun, interactive, and accessible.
 
@@ -23,7 +21,7 @@ Secondary school students in:
 
 Tech Stack
 
-- **Frontend:** React.js  
+- **Frontend:** React.js 
 - **Backend:** Firebase (Authentication, Firestore Database, Hosting)  
 - **AI Integration:** OpenAI GPT-3.5 (for chatbot responses)  
 - **Design Tools:** Figma or Canva (for UI/UX wireframes)
