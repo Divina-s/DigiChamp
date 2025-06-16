@@ -44,7 +44,7 @@ const Topics: React.FC = () => {
 
   /* ------- start quiz (navigate) ------- */
   const handleStartQuiz = () => {
-    if (selected !== null) navigate(`/quizzes/${selected}`);
+    if (selected !== null) navigate(`/quiz/${selected}`);
   };
 
   /* ================= RENDER ================= */

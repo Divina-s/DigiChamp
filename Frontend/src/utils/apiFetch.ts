@@ -7,12 +7,6 @@ console.log("Token gotten :", token);
 
 export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
-interface ApiAccessOptions {
-  url: string;
-  method: HttpMethod;
-  data?: Record<string, any>;
-}
-
 /**
  * Make an API call with fetch, using the access token from cookies.
  * @param url relative url (e.g. "/endpoint")

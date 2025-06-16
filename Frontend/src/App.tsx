@@ -37,7 +37,7 @@ function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/choose-topics" element={<Topics />} />
-          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/quiz/:id" element={<Quiz />} />
 
           {/* Admin Routes */}
           {/* {routes.map((route, idx) => (

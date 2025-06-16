@@ -1,10 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Input from '../../components/ui/Input';
 import type { FormData } from "../../types";
 import { Link, useNavigate } from 'react-router-dom';
 import { base_url } from '../../utils/apiFetch';
 
-type AccountType = 'student' | 'administrator';
+type Errors = {
+  username?: string;
+  password?: string;
+  submit?: string;
+};
 
 type Status = {
   success: boolean | null;
@@ -12,10 +16,6 @@ type Status = {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
-
-  // If you want to let user choose account type, uncomment the selector below.
-  const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('student');
-  const [isDarkMode, setIsDarkMode] = useState(false);
 
   // Only keep fields you use in the form
   const [formData, setFormData] = useState<FormData>({
@@ -26,19 +26,9 @@ const Login: React.FC = () => {
   });
 
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<Errors>({});
     const [status, setStatus] = useState<Status>({ success: null });
   const [isSubmitting, setIsSubmitting] = useState(false);
-
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(mediaQuery.matches);
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -50,22 +40,12 @@ const Login: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setErrorMessage(null);
-
-    if (!selectedAccountType) {
-      setErrorMessage('Please select an account type');
-      return;
-    }
-
-    if (!formData.username || !formData.password) {
-      setErrorMessage('Please fill in username and password');
-      return;
-    }
+    setErrorMessage({});
+    setStatus({ success: null });
 
     setIsSubmitting(true);
 
     const submitData = {
-      accountType: selectedAccountType,
       username: formData.username,
       password: formData.password,
     };
@@ -88,6 +68,7 @@ const Login: React.FC = () => {
         // Navigate to login page on success
         navigate('/choose-topics'); 
       } else {
+        setStatus({ success: false });
         setErrorMessage(result.detail || 'Login failed. Please check your credentials.');
       }
     } catch (error: any) {
@@ -142,6 +123,17 @@ const Login: React.FC = () => {
               ))}
             </div>
             */}
+            {status.success && (
+              <p className="text-green-600 text-sm font-medium">
+                Login successful! Redirecting...
+              </p>
+            )}
+
+            {status.success === false && errorMessage.submit && (
+              <p className="text-red-600 text-sm font-medium">
+                 {errorMessage.submit}
+              </p>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4" noValidate>
               <Input
@@ -191,10 +183,6 @@ const Login: React.FC = () => {
                   )}
                 </button>
               </div>
-
-              {errorMessage && (
-                <p className="text-red-600 text-sm font-medium">{errorMessage}</p>
-              )}
 
               <button
                 type="submit"

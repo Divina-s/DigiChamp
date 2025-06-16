@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import Input from '../../components/ui/Input';
 import type { FormData } from "../../types";
 import { Link, useNavigate } from 'react-router-dom';
@@ -21,7 +21,6 @@ type Status = {
 const Registration: React.FC = () => {
   const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('student');
   const navigate = useNavigate();
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
     username: '',
@@ -31,19 +30,6 @@ const Registration: React.FC = () => {
   const [errors, setErrors] = useState<Errors>({});
   const [status, setStatus] = useState<Status>({ success: null });
   const [submitting, setSubmitting] = useState(false);
-
-  // Dark mode detection
-  useEffect(() => {
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-    setIsDarkMode(mediaQuery.matches);
-    
-    const handleChange = (e: MediaQueryListEvent) => {
-      setIsDarkMode(e.matches);
-    };
-    
-    mediaQuery.addEventListener('change', handleChange);
-    return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -72,7 +58,7 @@ const Registration: React.FC = () => {
     };
 
     try {
-      const response = await fetch(`${base_url}/api/users/register/`, {
+      const response = await fetch(`${base_url}/api/users/paasword-reset/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submitData)
@@ -195,6 +181,18 @@ const Registration: React.FC = () => {
               </div>
             </div>
 
+            {status.success === true && (
+                <div className="mb-4 p-3 rounded bg-green-100 text-green-800 text-sm font-medium">
+                  Registration successful! Redirecting...
+                </div>
+              )}
+
+              {status.success === false && errors.submit && (
+                <div className="mb-4 p-3 rounded bg-red-100 text-red-800 text-sm font-medium">
+                  {errors.submit}
+                </div>
+              )}
+
             {/* Registration Form */}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -256,9 +254,14 @@ const Registration: React.FC = () => {
 
               <button 
                 type="submit" 
-                className="w-full py-3 px-4 rounded-lg text-white font-semibold text-base focus:outline-none focus:ring-4 focus:ring-purple-300 bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] hover:from-[#6D28D9] hover:to-[#4C1D95] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg"
+                disabled={submitting}
+                className={`w-full py-3 px-4 rounded-lg text-white font-semibold text-base focus:outline-none focus:ring-4 ${
+                  submitting
+                    ? 'bg-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-[#7C3AED] to-[#5B21B6] hover:from-[#6D28D9] hover:to-[#4C1D95] transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg'
+                }`}
               >
-                Sign Up
+                {submitting ? 'Signing up...' : 'Sign Up'}
               </button>
             </form>
 
