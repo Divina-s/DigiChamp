@@ -1,130 +1,100 @@
 import React, { useEffect, useState } from 'react';
+import { base_url } from '../utils/apiFetch';
+import { useNavigate } from 'react-router-dom';
+/* ----------  types  ---------- */
+interface Topic {
+  id: number;               // quiz_id you’ll need for /quizzes/:id
+  name: string;             // title shown on the card
+}
 
-const topics = [
-  "Basic Computer Operations",
-  "Intro to Coding Concepts",
-  "Google Workspace",
-  "Computer Ethics",
-  "Understanding Software and Applications",
-  "File Management and Storage",
-  "Internet Safety and Security",
-  "Hardware Components and Their Functions",
-];
-
+/* ----------  component  ---------- */
 const Topics: React.FC = () => {
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
+  const navigate = useNavigate();
 
-  const handleSelect = (topic: string) => {
-    setSelectedTopic(topic);
-    // Scroll to bottom to reveal buttons
+  const [topics, setTopics]   = useState<Topic[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError]     = useState<string | null>(null);
+  const [selected, setSelected] = useState<number | null>(null);
+
+  /* ------- fetch topics once on mount ------- */
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetch(`${base_url}/api/quiz/topics/`);
+        if (!res.ok) throw new Error('Unable to load topics');
+        const data: Topic[] = await res.json();
+        setTopics(data);
+      } catch (err: any) {
+        setError(err?.message ?? 'Unexpected error');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  /* ------- user picks a topic ------- */
+  const handleSelect = (topic: Topic) => {
+    setSelected(topic.id);
+
+    /* optional little scroll‑into‑view animation */
     setTimeout(() => {
       document.getElementById('actionButtons')?.scrollIntoView({ behavior: 'smooth' });
-    }, 300);
+    }, 250);
   };
 
-  const handlePrevious = () => {
-    setSelectedTopic(null);
-  };
-
+  /* ------- start quiz (navigate) ------- */
   const handleStartQuiz = () => {
-    if (selectedTopic) {
-      const confirmation = window.confirm(`Start quiz for "${selectedTopic}"?\n\nClick OK to begin or Cancel to choose a different topic.`);
-      if (confirmation) {
-        console.log('Quiz started for:', selectedTopic);
-        // Navigate to quiz page here
-      }
-    }
+    if (selected !== null) navigate(`/quizzes/${selected}`);
   };
 
-  useEffect(() => {
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 768;
-      if (isMobile && selectedTopic) {
-        setTimeout(() => {
-          document.getElementById('actionButtons')?.scrollIntoView({ behavior: 'smooth' });
-        }, 100);
-      }
-    };
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [selectedTopic]);
-
+  /* ================= RENDER ================= */
   return (
-    <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
-      <div className="container mx-auto px-12 py-8">
-        {/* Header */}
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
-            DIGICHAMP
-          </h1>
-        </div>
+    <div className="min-h-screen flex flex-col items-center px-6 py-10">
+      <h1 className="mb-10 text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
+        DIGICHAMP
+      </h1>
 
-        {/* Title */}
-        <div className="text-center mb-12">
-          <h2 className="text-4xl font-bold text-gray-900">Choose a Topic to Begin Quiz</h2>
-        </div>
+      {loading && <p className="text-gray-600">Loading topics…</p>}
+      {error   && <p className="text-red-600">{error}</p>}
 
-        {/* Topics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-          {topics.slice(0, 4).map(topic => (
-            <div
-              key={topic}
-              className={`topic-card bg-white border-2 rounded-xl p-6 cursor-pointer ${
-                selectedTopic === topic ? 'selected' : 'border-gray-300'
-              }`}
-              onClick={() => handleSelect(topic)}
-            >
-              <h3 className="text-lg font-medium text-gray-900 text-center">{topic}</h3>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-          {topics.slice(4, 7).map(topic => (
-            <div
-              key={topic}
-              className={`topic-card bg-white border-2 rounded-xl p-6 cursor-pointer ${
-                selectedTopic === topic ? 'selected' : 'border-gray-300'
-              }`}
-              onClick={() => handleSelect(topic)}
-            >
-              <h3 className="text-lg font-medium text-gray-900 text-center">{topic}</h3>
-            </div>
-          ))}
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-12">
-          <div
-            className={`topic-card bg-white border-2 rounded-xl p-6 cursor-pointer ${
-              selectedTopic === topics[7] ? 'selected' : 'border-gray-300'
-            }`}
-            onClick={() => handleSelect(topics[7])}
-          >
-            <h3 className="text-lg font-medium text-gray-900 text-center">{topics[7]}</h3>
+      {!loading && !error && (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-6xl">
+            {topics.map(t => (
+              <div
+                key={t.id}
+                onClick={() => handleSelect(t)}
+                className={`cursor-pointer p-6 rounded-xl border-2 transition
+                  ${selected === t.id
+                    ? 'bg-gradient-to-br from-purple-50 to-purple-100 border-purple-500'
+                    : 'bg-white border-gray-300 hover:border-purple-400'}`}
+              >
+                <h3 className="text-center font-medium text-gray-900">{t.name}</h3>
+              </div>
+            ))}
           </div>
-        </div>
 
-        {/* Buttons */}
-        <div
-          id="actionButtons"
-          className={`flex justify-end space-x-4 transition-opacity duration-300 ${
-            selectedTopic ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
-          <button
-            onClick={handlePrevious}
-            className="px-8 py-3 bg-purple-200 text-purple-900 font-medium rounded-lg hover:bg-purple-300 transition-colors"
+          {/* action buttons */}
+          <div
+            id="actionButtons"
+            className={`mt-10 flex gap-4 transition-opacity duration-300
+              ${selected === null ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
           >
-            Previous Page
-          </button>
-          <button
-            onClick={handleStartQuiz}
-            className="px-8 py-3 bg-purple-950 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors"
-          >
-            Start Quiz
-          </button>
-        </div>
-      </div>
+            <button
+              onClick={() => setSelected(null)}
+              className="px-6 py-3 bg-purple-200 text-purple-900 rounded-lg hover:bg-purple-300"
+            >
+              Choose Again
+            </button>
+            <button
+              onClick={handleStartQuiz}
+              className="px-6 py-3 bg-purple-950 text-white rounded-lg hover:bg-purple-700"
+            >
+              Start Quiz
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 };

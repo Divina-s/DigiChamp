@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import Input from '../../components/ui/Input';
 import type { FormData } from "../../types";
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { base_url } from '../../utils/apiFetch';
 
 type AccountType = 'student' | 'administrator' | null;
 
+type Errors = {
+  fullName?: string;
+  username?: string;
+  email?: string;
+  password?: string;
+  submit?: string;
+};
+
+type Status = {
+  success: boolean | null;
+};
+
 const Registration: React.FC = () => {
   const [selectedAccountType, setSelectedAccountType] = useState<AccountType>('student');
+  const navigate = useNavigate();
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     fullName: '',
@@ -14,6 +28,9 @@ const Registration: React.FC = () => {
     email: '',
     password: ''
   });
+  const [errors, setErrors] = useState<Errors>({});
+  const [status, setStatus] = useState<Status>({ success: null });
+  const [submitting, setSubmitting] = useState(false);
 
   // Dark mode detection
   useEffect(() => {
@@ -36,20 +53,52 @@ const Registration: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
+    setErrors({});
+    setStatus({ success: null });
+    setSubmitting(true);
+
     if (!selectedAccountType) {
       alert('Please select an account type');
+      setSubmitting(false);
       return;
     }
-    
+
     const submitData = {
       accountType: selectedAccountType,
       ...formData
     };
-    
-    console.log('Form submitted with data:', submitData);
+
+    try {
+      const response = await fetch(`${base_url}/api/users/register/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(submitData)
+      });
+
+      const rsp = await response.json();
+
+      if (response.ok) {
+        setStatus({ success: true });
+        console.log("Registration successful!", rsp);
+      
+        // Navigate to login page on success
+        navigate('/');
+      } else if (response.status === 400) {
+        setStatus({ success: false });
+        setErrors({ submit: rsp.detail || "Registration failed" });
+      } else {
+        setStatus({ success: false });
+        setErrors({ submit: "Something went wrong. Please try again." });
+      }
+    } catch (err: any) {
+      setErrors({ submit: err.message || "Network error" });
+      setStatus({ success: false });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const selectAccountType = (type: AccountType) => {
@@ -59,7 +108,7 @@ const Registration: React.FC = () => {
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - Branding */}
-      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full">
+      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full hidden lg:block">
         <div className="absolute inset-0 bg-gradient-to-br from-[#130122] via-[#2D1B69] to-[#3d1a6b]"></div>
         
         <div className="relative z-10 h-full flex items-center justify-center">

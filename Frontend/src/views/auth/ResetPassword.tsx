@@ -40,7 +40,7 @@ const ResetPassword: React.FC = () => {
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - Branding */}
-      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full">
+      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full hidden lg:block">
         <div className="absolute inset-0 bg-gradient-to-br from-[#130122] via-[#2D1B69] to-[#3d1a6b]"></div>
         
         <div className="relative z-10 h-full flex items-center justify-center">

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import successImg from '../assets/img/success.png';
 import failedImg from '../assets/img/failed.png';
+import { useParams } from 'react-router-dom';
 
 type Question = {
   question: string;
@@ -19,6 +20,7 @@ type QuizState = {
 };
 
 const Quiz: React.FC = () => {
+  const { quizId } = useParams();
   // Quiz data
   const quizData: Question[] = [
     {
