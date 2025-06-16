@@ -81,8 +81,9 @@ const Login: React.FC = () => {
   return (
     <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
       {/* Left Side - Branding */}
-      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full">
-        <div className="absolute inset-0 bg-gradient-to-br from-[#130122] via-[#2D1B69] to-[#3d1a6b] hidden lg:block"></div>
+      <div className="w-full lg:w-1/2 relative min-h-[40vh] lg:min-h-full hidden lg:block">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#130122] via-[#2D1B69] to-[#3d1a6b]"></div>
+        
         <div className="relative z-10 h-full flex items-center justify-center">
           <div className="text-center p-8">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold bg-gradient-to-r from-[#8B5CF6] to-[#F59E0B] bg-clip-text text-transparent mb-4">
@@ -90,6 +91,7 @@ const Login: React.FC = () => {
             </h1>
           </div>
         </div>
+
         <div className="absolute inset-0 opacity-50">
           <div className="w-full h-full bg-gradient-to-t from-purple-600/20 to-transparent"></div>
         </div>
@@ -99,6 +101,11 @@ const Login: React.FC = () => {
       <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 overflow-y-auto">
         <div className="min-h-full flex items-center justify-center p-4 sm:p-8">
           <div className="w-full max-w-md">
+            <div className="flex justify-between items-center mb-4 block lg:hidden">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
+                DIGICHAMP
+              </h1>
+            </div>
             <div className="text-start mb-8">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Welcome back</h2>
               <p className="text-gray-600 dark:text-gray-400">Enter your credentials to access your account</p>

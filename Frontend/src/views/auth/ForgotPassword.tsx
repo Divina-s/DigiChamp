@@ -69,6 +69,11 @@ const ForgotPassword: React.FC = () => {
       <div className="w-full lg:w-1/2 bg-white dark:bg-gray-900 overflow-y-auto">
         <div className="min-h-full flex items-center justify-center p-4 sm:p-8">
           <div className="w-full max-w-md">
+          <div className="flex justify-between items-center mb-4 block lg:hidden">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
+                DIGICHAMP
+              </h1>
+            </div>
             <div className="text-start mb-12">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Forgot Password</h2>
               <p className="text-gray-600 dark:text-gray-400">
