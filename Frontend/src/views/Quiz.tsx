@@ -22,7 +22,7 @@ type QuizState = {
 };
 
 const Quiz: React.FC = () => {
-  const { quizId } = useParams();
+  const { quizId } = useParams<{ quizId: string }>();
 
   const [quizData, setQuizData] = useState<Question[]>([]);
   const [state, setState] = useState<QuizState>({
@@ -36,20 +36,12 @@ const Quiz: React.FC = () => {
   });
 
   const timerRef = useRef<number | null>(null);
-  const [quizCompleted, setQuizCompleted] = React.useState(false);
-  const [score, setScore] = React.useState(0);
-  const totalQuestions = 10;
-
-  const completeQuiz = () => {
-    setQuizCompleted(true);
-    setScore(75); // Example score
-  };
 
   // Fetch quiz data
   useEffect(() => {
     if (!quizId) return;
 
-    (async () => {
+    const fetchQuizData = async () => {
       try {
         const res = await fetch(`${base_url}/api/quizzes/${quizId}/`);
         if (!res.ok) throw new Error('Failed to fetch quiz data');
@@ -70,7 +62,9 @@ const Quiz: React.FC = () => {
       } catch (err) {
         console.error('Error loading quiz:', err);
       }
-    })();
+    };
+
+    fetchQuizData();
   }, [quizId]);
 
   // Start timer only after quizData is loaded
@@ -90,7 +84,7 @@ const Quiz: React.FC = () => {
     timerRef.current = setInterval(() => {
       setState((prev) => {
         if (prev.timeRemaining <= 1) {
-          clearInterval(timerRef.current as number);
+          if (timerRef.current) clearInterval(timerRef.current);
           return { ...prev, timeRemaining: 0, quizCompleted: true };
         }
         return { ...prev, timeRemaining: prev.timeRemaining - 1 };
@@ -189,6 +183,15 @@ const Quiz: React.FC = () => {
     return `${baseClass} border-2 border-gray-300`;
   };
 
+  // Guard clause for loading state
+  if (quizData.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-xl text-gray-600">Loading quiz...</div>
+      </div>
+    );
+  }
+
   const renderQuizView = () => (
     <>
       <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
@@ -268,7 +271,7 @@ const Quiz: React.FC = () => {
                         strokeLinejoin="round"
                         strokeWidth="2"
                         d="M13 9l3 3-3 3m-6-3h9"
-                      ></path>
+                      />
                     </svg>
                     Skip
                   </button>
@@ -378,9 +381,9 @@ const Quiz: React.FC = () => {
         </div>
       </div>
       <Chatbot 
-      quizCompleted={quizCompleted}
-      score={score}
-      totalQuestions={totalQuestions}
+        quizCompleted={state.quizCompleted}
+        score={state.score}
+        totalQuestions={quizData.length}
       />
     </>
   );

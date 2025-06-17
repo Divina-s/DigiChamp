@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { base_url } from '../utils/apiFetch';
 import { useNavigate } from 'react-router-dom';
-import Chatbot from '../components/Chatbot';
 /* ----------  types  ---------- */
 interface Topic {
   id: number;               // quiz_id you’ll need for /quizzes/:id
