@@ -58,7 +58,7 @@ const Registration: React.FC = () => {
     };
 
     try {
-      const response = await fetch(`${base_url}/api/users/paasword-reset/`, {
+      const response = await fetch(`${base_url}/api/users/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(submitData)

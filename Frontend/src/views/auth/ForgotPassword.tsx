@@ -23,7 +23,7 @@ const ForgotPassword: React.FC = () => {
     e.preventDefault();
 
     try {
-      const response = await fetch(`${base_url}/api/users/paasword-reset/`, {
+      const response = await fetch(`${base_url}/api/users/password-reset/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
