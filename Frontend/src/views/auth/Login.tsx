@@ -3,6 +3,7 @@ import Input from '../../components/ui/Input';
 import type { FormData } from "../../types";
 import { Link, useNavigate } from 'react-router-dom';
 import { base_url } from '../../utils/apiFetch';
+import { useAuth } from '../../utils/AuthContext';
 
 type Errors = {
   username?: string;
@@ -16,6 +17,7 @@ type Status = {
 
 const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { setAccessToken } = useAuth();
 
   // Only keep fields you use in the form
   const [formData, setFormData] = useState<FormData>({
@@ -62,7 +64,8 @@ const Login: React.FC = () => {
       const result = await response.json();
 
       if (response.ok) {
-       setStatus({ success: true });
+        setAccessToken(result.access);
+        setStatus({ success: true });
         console.log("Login successful!", result);
       
         // Navigate to login page on success

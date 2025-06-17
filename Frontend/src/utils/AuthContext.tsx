@@ -5,15 +5,15 @@ import Cookies from 'js-cookie';
 
 interface DecodedToken {
   exp: number; // expiration timestamp in seconds
-  // Add other token fields here if needed
+  userId: number; // Add user ID if present in token
+  name: string; // Add name if present in token
+  email: string; // Add email if present in token
 }
 
 interface User {
-  // Define the shape of your user object based on your API response
   id: number;
   name: string;
   email: string;
-  // add other user properties...
 }
 
 interface AuthContextType {
@@ -40,8 +40,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const setAccessToken = (token: string | null) => {
     if (token) {
       Cookies.set('accessToken', token, { expires: 7 }); // expires in 7 days
+      const decodedToken = jwtDecode<DecodedToken>(token);
+      setUser({
+        id: decodedToken.userId,
+        name: decodedToken.name,
+        email: decodedToken.email,
+      });
     } else {
       Cookies.remove('accessToken');
+      setUser(null);
     }
     setAccessTokenState(token);
   };
@@ -62,6 +69,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setAccessTokenState(token);
           setIsLoggedIn(true);
+          setUser({
+            id: decodedToken.userId,
+            name: decodedToken.name,
+            email: decodedToken.email,
+          });
         }
       } catch (error) {
         console.error('Error decoding token', error);
@@ -70,43 +82,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       setLoading(false);
     }
   }, []);
-
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (accessToken) {
-        try {
-          setLoading(true);
-          const response = await fetch(`${import.meta.env.VITE_BASE_URL}/admin/current_user`, {
-            method: 'GET',
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.ok) {
-            const userData: User = await response.json();
-            setUser(userData);
-            setIsLoggedIn(true);
-          } else {
-            console.error('Failed to fetch user data');
-            setIsLoggedIn(false);
-            setUser(null);
-          }
-        } catch (error) {
-          console.error('Error fetching user:', error);
-          setIsLoggedIn(false);
-          setUser(null);
-        } finally {
-          setLoading(false);
-        }
-      } else {
-        setLoading(false);
-      }
-    };
-
-    fetchUser();
-  }, [accessToken]);
 
   const logout = () => {
     Cookies.remove('accessToken');

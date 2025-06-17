@@ -1,163 +1,241 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import successImg from '../assets/img/success.png';
 import failedImg from '../assets/img/failed.png';
-import { useParams } from 'react-router-dom';
 import { base_url } from '../utils/apiFetch';
 import Chatbot from '../components/Chatbot';
+import { useLocation, useParams } from 'react-router-dom';
+import { useAuth } from '../utils/AuthContext';
 
-type Question = {
-  question: string;
-  options: Record<string, string>;
-  correct: string;
+type QuizOption = {
+  id: number;
+  text: string; // Option text
+};
+
+type QuizQuestion = {
+  id: number;
+  text: string; // Question text
+  options: QuizOption[]; // Array of QuizOption
+  correct_answer: string; // Correct answer text
 };
 
 type QuizState = {
   currentQuestion: number;
-  userAnswers: (string | null)[];
   selectedAnswer: string | null;
-  timeRemaining: number;
+  userAnswers: (string | null)[];
   score: number;
   quizCompleted: boolean;
   passed: boolean;
+  timeRemaining: number;
+  reviewMode: boolean;
 };
 
-const Quiz: React.FC = () => {
-  const { quizId } = useParams<{ quizId: string }>();
+const TOTAL_TIME = 600;
 
-  const [quizData, setQuizData] = useState<Question[]>([]);
+const Quiz: React.FC = () => {
+  const { id: topicId } = useParams();
+  const location = useLocation();
+  const searchParams = new URLSearchParams(location.search);
+  const level = searchParams.get('level') || 'beginner';
+  const { accessToken } = useAuth();
+
+  const [quizData, setQuizData] = useState<QuizQuestion[]>([]);
   const [state, setState] = useState<QuizState>({
     currentQuestion: 0,
-    userAnswers: [],
     selectedAnswer: null,
-    timeRemaining: 900, // 15 minutes
+    userAnswers: [],
     score: 0,
     quizCompleted: false,
     passed: false,
+    timeRemaining: TOTAL_TIME,
+    reviewMode: false,
   });
 
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
   const timerRef = useRef<number | null>(null);
 
-  // Fetch quiz data
   useEffect(() => {
-    if (!quizId) return;
+    if (!topicId) {
+      setError('No topic ID provided');
+      setLoading(false);
+      return;
+    }
 
-    const fetchQuizData = async () => {
-      try {
-        const res = await fetch(`${base_url}/api/quizzes/${quizId}/`);
-        if (!res.ok) throw new Error('Failed to fetch quiz data');
-        const data: Question[] = await res.json();
-        setQuizData(data);
+    fetch(`${base_url}/api/quiz/quiz/questions/?topic_id=${topicId}&level=${level}`)
+      .then((res) => {
+        if (!res.ok) throw new Error('Failed to load quiz');
+        return res.json();
+      })
+      .then((data: any[]) => {
+        if (!data.length) throw new Error('No questions found');
 
-        // Initialize userAnswers array based on fetched quiz length
-        setState((prev) => ({
-          ...prev,
-          userAnswers: Array(data.length).fill(null),
-          selectedAnswer: null,
-          currentQuestion: 0,
-          score: 0,
-          quizCompleted: false,
-          passed: false,
-          timeRemaining: 900,
-        }));
-      } catch (err) {
-        console.error('Error loading quiz:', err);
-      }
-    };
+        // Normalize quiz data
+        const normalizedData = data.map((q: any) => {
+          const text = typeof q.text === 'string' ? q.text : 'Question text unavailable';
+          const options = Array.isArray(q.options)
+            ? q.options.map((option: any) => ({
+                id: option.id,
+                text: option.text,
+              }))
+            : [];
+        
+          return {
+            id: q.id,
+            text,
+            options,
+            correct_answer: q.correct_answer || '',
+          };
+        });
 
-    fetchQuizData();
-  }, [quizId]);
+        console.log('Normalized quiz data:', normalizedData); // Debug log
+        setQuizData(normalizedData);
+        setState((prev) => ({ ...prev, userAnswers: Array(normalizedData.length).fill(null) }));
+        setLoading(false);
+      })
+      .catch((err) => {
+        console.error('Quiz loading error:', err); // Debug log
+        setError(err.message || 'Unable to load quiz. Please try again.');
+        setLoading(false);
+      });
+  }, [topicId, level]);
 
-  // Start timer only after quizData is loaded
   useEffect(() => {
-    if (quizData.length === 0) return;
-
-    startTimer();
-
+    if (!state.quizCompleted && quizData.length > 0) {
+      timerRef.current = window.setInterval(() => {
+        setState((prev) => {
+          if (prev.timeRemaining <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            submitQuiz();
+            return { ...prev, timeRemaining: 0 };
+          }
+          return { ...prev, timeRemaining: prev.timeRemaining - 1 };
+        });
+      }, 1000);
+    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [quizData]);
+  }, [state.quizCompleted, quizData.length]);
 
-  const startTimer = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [state.currentQuestion]);
 
-    timerRef.current = setInterval(() => {
-      setState((prev) => {
-        if (prev.timeRemaining <= 1) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          return { ...prev, timeRemaining: 0, quizCompleted: true };
-        }
-        return { ...prev, timeRemaining: prev.timeRemaining - 1 };
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+    const s = (seconds % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  };
+
+  const calculateTimerProgress = () => {
+    const progress = (state.timeRemaining / TOTAL_TIME) * 283;
+    return 283 - progress;
+  };
+
+  const handleAnswerClick = async (answer: string) => {
+    const currentQuestion = quizData[state.currentQuestion];
+    if (!currentQuestion) return;
+
+    // Find the selected option's ID based on the answer text
+    const selectedOption = currentQuestion.options.find(option => option.text === answer);
+    const selectedOptionId = selectedOption ? selectedOption.id : null;
+
+    if (!selectedOptionId) {
+      console.error('Selected option ID not found.');
+      return; // Ensure we have a valid ID
+    }
+
+    try {
+      const response = await fetch(`${base_url}/api/quiz/quiz/submit-answer/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          question_id: currentQuestion.id, // Send the question ID
+          selected_option_id: selectedOptionId, // Send the selected option ID
+        }),
       });
-    }, 1000);
-  };
 
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
+      const result = await response.json();
+      if (!response.ok) {
+        console.error('Error submitting answer:', result);
+        setError(result.error || 'Failed to submit answer.');
+        return;
+      }
 
-  const calculateTimerProgress = (): number => {
-    const totalTime = 900;
-    return ((totalTime - state.timeRemaining) / totalTime) * 283;
-  };
-
-  const handleAnswerSelect = (option: string) => {
-    if (state.selectedAnswer || state.quizCompleted) return;
-
-    const currentQ = quizData[state.currentQuestion];
-    const isCorrect = option === currentQ.correct;
-    const newScore = isCorrect ? state.score + 10 : state.score;
-
-    const updatedAnswers = [...state.userAnswers];
-    updatedAnswers[state.currentQuestion] = option;
-
-    setState((prev) => ({
-      ...prev,
-      selectedAnswer: option,
-      userAnswers: updatedAnswers,
-      score: newScore,
-    }));
+      // Process result to update the state (e.g., correct or incorrect answer)
+      if (result.isCorrect) {
+        // Update score or state accordingly
+      } else {
+        // Update score or state accordingly
+      }
+    } catch (error) {
+      console.error('Error submitting answer:', error);
+    }
   };
 
   const goToNextQuestion = () => {
-    if (state.currentQuestion < quizData.length - 1) {
-      setState((prev) => ({
-        ...prev,
-        currentQuestion: prev.currentQuestion + 1,
-        selectedAnswer: prev.userAnswers[prev.currentQuestion + 1] || null,
-      }));
-    }
+    const currentQ = quizData[state.currentQuestion];
+    const isCorrect = state.selectedAnswer === currentQ.correct_answer;
+    const updatedAnswers = [...state.userAnswers];
+    updatedAnswers[state.currentQuestion] = state.selectedAnswer;
+
+    setState((prev) => ({
+      ...prev,
+      currentQuestion: prev.currentQuestion + 1,
+      selectedAnswer: updatedAnswers[prev.currentQuestion + 1] ?? null,
+      userAnswers: updatedAnswers,
+      score: isCorrect ? prev.score + 10 : prev.score,
+    }));
   };
 
   const goToPreviousQuestion = () => {
-    if (state.currentQuestion > 0) {
-      setState((prev) => ({
-        ...prev,
-        currentQuestion: prev.currentQuestion - 1,
-        selectedAnswer: prev.userAnswers[prev.currentQuestion - 1] || null,
-      }));
-    }
-  };
-
-  const submitQuiz = () => {
-    if (timerRef.current) clearInterval(timerRef.current);
-
-    const percentage = Math.round((state.score / (quizData.length * 10)) * 100);
     setState((prev) => ({
       ...prev,
-      quizCompleted: true,
-      passed: percentage >= 70,
+      currentQuestion: prev.currentQuestion - 1,
+      selectedAnswer: state.userAnswers[prev.currentQuestion - 1] ?? null,
     }));
   };
 
   const skipQuestion = () => {
-    if (state.currentQuestion < quizData.length - 1) {
-      goToNextQuestion();
-    } else {
-      submitQuiz();
-    }
+    const updatedAnswers = [...state.userAnswers];
+    updatedAnswers[state.currentQuestion] = null;
+    setState((prev) => ({
+      ...prev,
+      currentQuestion: prev.currentQuestion + 1,
+      selectedAnswer: updatedAnswers[prev.currentQuestion + 1] ?? null,
+      userAnswers: updatedAnswers,
+    }));
+  };
+
+  const submitQuiz = () => {
+    const finalScore = state.userAnswers.reduce((acc, answer, index) => {
+      return answer === quizData[index].correct_answer ? acc + 10 : acc;
+    }, 0);
+
+    const passed = finalScore >= 70;
+    setState((prev) => ({
+      ...prev,
+      score: finalScore,
+      passed,
+      quizCompleted: true,
+    }));
+
+    fetch(`${base_url}/api/quiz/quiz/results/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        score: finalScore,
+        passed,
+        answers: state.userAnswers,
+      }),
+    });
+  };
+
+  const toggleReviewMode = () => {
+    setState((prev) => ({ ...prev, reviewMode: !prev.reviewMode }));
   };
 
   const calculateProgress = (): number => {
@@ -165,37 +243,50 @@ const Quiz: React.FC = () => {
     return ((state.currentQuestion + 1) / quizData.length) * 100;
   };
 
-  const getOptionClass = (option: string): string => {
-    const baseClass =
-      'answer-option bg-white rounded-xl p-6 cursor-pointer transition-all duration-200';
-    const currentQuestion = quizData[state.currentQuestion];
-
-    if (!state.selectedAnswer) return `${baseClass} border-2 border-gray-300`;
-
-    if (option === currentQuestion.correct) {
-      return `${baseClass} border-2 bg-gradient-to-br from-green-100 to-green-200 border-green-500`;
+  const getOptionClass = (option: string) => {
+    const correct = quizData[state.currentQuestion].correct_answer;
+    const userAns = state.reviewMode
+      ? state.userAnswers[state.currentQuestion]
+      : state.selectedAnswer;
+  
+    if (state.reviewMode) {
+      if (option === correct && userAns !== correct) return 'answer-correct-highlight';
+      if (option === correct && userAns === correct) return 'answer-correct';
+      if (option === userAns && userAns !== correct) return 'answer-wrong';
+    } else if (option === userAns) {
+      return option === correct
+        ? 'answer-correct'
+        : 'answer-wrong';
     }
-
-    if (option === state.selectedAnswer && option !== currentQuestion.correct) {
-      return `${baseClass} border-2 bg-gradient-to-br from-red-100 to-red-200 border-red-500`;
-    }
-
-    return `${baseClass} border-2 border-gray-300`;
+  
+    return 'border-gray-200';
   };
 
-  // Guard clause for loading state
-  if (quizData.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-xl text-gray-600">Loading quiz...</div>
-      </div>
-    );
-  }
+  if (loading) return <div className="text-center mt-12 text-lg">Loading Quiz...</div>;
+  if (error) return <div className="text-center mt-12 text-red-600">{error}</div>;
 
-  const renderQuizView = () => (
-    <>
+  if (!quizData.length) return <div className="text-center mt-12 text-red-600">No quiz data available.</div>;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {state.quizCompleted && !state.reviewMode ? renderResultsView() : renderQuizView()}
+    </div>
+  );
+
+  function renderQuizView() {
+    const currentQuestion = quizData[state.currentQuestion];
+    
+    // Additional safety check
+    if (!currentQuestion) {
+      return <div className="text-center mt-12 text-red-600">Question not found.</div>;
+    }
+
+    const questionText = currentQuestion.text;
+
+    return (
+      <>
       <div className="fixed inset-0 overflow-hidden flex flex-col lg:flex-row">
-        <div className="container mx-auto px-12 py-8">
+        <div className="container mx-auto px-6 py-8">
           {/* Header */}
           <div className="flex justify-between items-center mb-8">
             <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
@@ -203,7 +294,7 @@ const Quiz: React.FC = () => {
             </h1>
           </div>
 
-          <div className="max-w-9xl mx-auto">
+          <div className="max-w-7xl mx-auto">
             {/* Title and Progress */}
             <div className="mb-8">
               <h2 className="text-3xl font-bold text-gray-900 mb-4">Introduction to Coding</h2>
@@ -222,66 +313,57 @@ const Quiz: React.FC = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-              {/* Main Quiz Content */}
+              {/* Main */}
               <div className="lg:col-span-3">
-                {/* Question Card */}
                 <div className="bg-white border-2 border-gray-200 rounded-xl p-8 mb-8">
                   <div className="flex items-center mb-6">
-                    <span className="bg-purple-950 text-white px-3 py-1 rounded-full text-sm font-medium">
-                      10 points
-                    </span>
+                      <span className="bg-purple-950 text-white px-3 py-1 rounded-full text-sm font-medium">10 points</span>
                   </div>
-                  <h3 className="text-xl font-medium text-gray-900">
-                    {quizData[state.currentQuestion].question}
+                  <h3 id="questionText" className="text-xl font-medium text-gray-900">
+                    {questionText}
                   </h3>
                 </div>
 
-                {/* Answer Options */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                  {Object.entries(quizData[state.currentQuestion].options).map(([key, value]) => (
-                    <div
-                      key={key}
-                      className={getOptionClass(key)}
-                      onClick={() => handleAnswerSelect(key)}
-                    >
-                      <div className="flex items-center">
-                        <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-medium text-gray-700 mr-4">
-                          {key}
-                        </span>
-                        <span className="text-gray-900">{value}</span>
+                  {currentQuestion.options.length ? (
+                    currentQuestion.options.map((option, idx) => (
+                      <div
+                        key={idx}
+                        onClick={() => handleAnswerClick(option.text)} // Pass the option text
+                        className={`answer-option border-2 rounded-xl p-6 cursor-pointer transition-all ${getOptionClass(option.text)}`}
+                        data-option={String.fromCharCode(65 + idx)} // A, B, C, D
+                        style={{ pointerEvents: state.reviewMode ? "none" : "auto" }}
+                      >
+                        <div className="flex items-center">
+                          <span className="w-8 h-8 bg-gray-100 rounded-full flex items-center justify-center font-medium text-gray-700 mr-4">
+                            {String.fromCharCode(65 + idx)}
+                          </span>
+                          <span className="text-gray-900">{option.text}</span> {/* Use option.text */}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    ))
+                  ) : (
+                    <p>No options available for this question.</p>
+                  )}
                 </div>
 
                 {/* Navigation Buttons */}
                 <div className="flex justify-between items-center">
                   <button
                     onClick={skipQuestion}
-                    className="flex items-center text-gray-600 hover:text-gray-800"
+                    className="text-gray-600 hover:text-gray-800 flex items-center"
+                    disabled={state.reviewMode}
                   >
-                    <svg
-                      className="w-4 h-4 mr-2"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="2"
-                        d="M13 9l3 3-3 3m-6-3h9"
-                      />
+                    <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 9l3 3-3 3m-6-3h9" />
                     </svg>
                     Skip
                   </button>
+
                   <div className="flex space-x-4">
                     {state.currentQuestion > 0 && (
-                      <button
-                        onClick={goToPreviousQuestion}
-                        className="px-6 py-3 bg-purple-200 text-purple-700 font-medium rounded-lg hover:bg-purple-300 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                      >
-                        Previous Question
+                      <button onClick={goToPreviousQuestion} className="px-6 py-3 bg-purple-200 text-purple-700 rounded-lg">
+                        Previous
                       </button>
                     )}
 
@@ -289,15 +371,15 @@ const Quiz: React.FC = () => {
                       <button
                         onClick={goToNextQuestion}
                         disabled={!state.selectedAnswer}
-                        className="px-6 py-3 bg-purple-950 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        className="px-6 py-3 bg-purple-950 text-white rounded-lg disabled:opacity-50"
                       >
-                        Next Question
+                        Next
                       </button>
                     ) : (
                       <button
                         onClick={submitQuiz}
-                        disabled={!state.selectedAnswer}
-                        className="px-6 py-3 bg-purple-950 text-white font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                        disabled={state.userAnswers.includes(null)}
+                        className="px-6 py-3 bg-purple-950 text-white rounded-lg disabled:opacity-50"
                       >
                         Submit Quiz
                       </button>
@@ -310,30 +392,16 @@ const Quiz: React.FC = () => {
               <div className="lg:col-span-1">
                 <div className="bg-white border-2 border-gray-200 rounded-xl p-6 mb-6">
                   <h4 className="text-lg font-bold text-gray-900 mb-6">Quiz Stats</h4>
-
-                  {/* Timer */}
                   <div className="flex flex-col items-center mb-6">
                     <div className="relative w-24 h-24 mb-2">
-                      <svg className="w-24 h-24 transform -rotate-90" viewBox="0 0 100 100">
-                        {/* Background Circle */}
-                        <circle
-                          cx="50"
-                          cy="50"
-                          r="45"
-                          stroke="#e5e7eb"
-                          strokeWidth="4"
-                          fill="none"
-                        />
-
-                        {/* Gradient Definition */}
+                      <svg className="w-24 h-24 -rotate-90" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="45" stroke="#e5e7eb" strokeWidth="4" fill="none" />
                         <defs>
                           <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
                             <stop offset="0%" stopColor="#8B5CF6" />
                             <stop offset="100%" stopColor="#F59E0B" />
                           </linearGradient>
                         </defs>
-
-                        {/* Foreground Circle with Gradient Stroke */}
                         <circle
                           cx="50"
                           cy="50"
@@ -348,19 +416,15 @@ const Quiz: React.FC = () => {
                           }}
                         />
                       </svg>
-
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-lg font-bold text-gray-900">
-                          {formatTime(state.timeRemaining)}
-                        </span>
+                        <span className="text-lg font-bold text-gray-900">{formatTime(state.timeRemaining)}</span>
                       </div>
                     </div>
                     <span className="text-sm text-gray-600">Time Remaining</span>
                   </div>
 
-                  {/* Progress */}
-                  <div className="bg-gray-50 rounded-lg p-4 text-center">
-                    <div className="text-sm text-gray-600 mb-1">Progress</div>
+                  <div className="text-center bg-gray-50 p-4 rounded-lg">
+                    <div className="text-sm text-gray-600">Progress</div>
                     <div className="text-lg font-bold text-gray-900">
                       {state.currentQuestion + 1}/{quizData.length}
                     </div>
@@ -369,87 +433,73 @@ const Quiz: React.FC = () => {
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Chat Bot Icon */}
-        <div className="fixed bottom-6 right-6">
-          <div className="w-14 h-14 bg-purple-950 rounded-full flex items-center justify-center text-white cursor-pointer hover:bg-purple-700 transition-colors">
-            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M12 2C6.48 2 2 6.48 2 12c0 1.54.36 3.04 1.05 4.38L1 22l5.62-2.05C8.96 21.64 10.46 22 12 22c5.52 0 10-4.48 10-10S17.52 2 12 2zm-1 15h-2v-2h2v2zm2.07-7.75l-.9.92C11.45 10.9 11 11.5 11 13h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H6c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z" />
-            </svg>
-          </div>
         </div>
       </div>
-      <Chatbot 
-        quizCompleted={state.quizCompleted}
-        score={state.score}
-        totalQuestions={quizData.length}
-      />
-    </>
-  );
 
-  const renderResultsView = () => {
-    const percentage = Math.round((state.score / (quizData.length * 10)) * 100);
-
-    return (
-      <div className="container mx-auto px-6 py-8 min-h-screen flex flex-col justify-center">
-        <div className="max-w-4xl mx-auto text-center">
-          {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
-              DIGICHAMP
-            </h1>
-          </div>
-
-          {/* Result Icon and Message */}
-          <div className="mb-12">
-            <div className="flex justify-center mb-8">
-              {state.passed ? (
-                <img src={successImg} alt="Success" />
-              ) : (
-                <img src={failedImg} alt="Failed" />
-              )}
-            </div>
-
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              {state.passed ? 'Congratulations You Passed!' : "Failed This Attempt. Let's Try Again!"}
-            </h2>
-            <a href="#" className="text-purple-950 hover:text-purple-700 font-medium">
-              Review Responses
-            </a>
-          </div>
-
-          {/* Score Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md mx-auto">
-            <div className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center">
-              <div className="text-gray-600 mb-2">Your Score</div>
-              <div
-                className={`text-3xl font-bold mb-1 ${
-                  state.passed ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {percentage}%
-              </div>
-              <div className="text-sm text-gray-500">Passing score 70%</div>
-            </div>
-            <div className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center">
-              <div className="text-gray-600 mb-2">Your Points</div>
-              <div
-                className={`text-3xl font-bold mb-1 ${
-                  state.passed ? 'text-green-600' : 'text-red-600'
-                }`}
-              >
-                {state.score}
-              </div>
-              <div className="text-sm text-gray-500">Passing points 70</div>
-            </div>
-          </div>
-        </div>
+      {/* Chatbot + Floating button */}
+      <div className="fixed bottom-6 right-6">
+        <button
+          onClick={toggleReviewMode}
+          className="w-14 h-14 bg-purple-950 rounded-full flex items-center justify-center text-white hover:bg-purple-700"
+        >
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12...z" />
+          </svg>
+        </button>
       </div>
+
+      <Chatbot quizCompleted={state.quizCompleted} score={state.score} totalQuestions={quizData.length} />
+      </>
     );
-  };
+  }
 
-  return <div className="min-h-screen bg-gray-50">{state.quizCompleted ? renderResultsView() : renderQuizView()}</div>;
+  function renderResultsView() {
+    const percentage = Math.round((state.score / (quizData.length * 10)) * 100);
+    return (
+      <>
+        <div className="container mx-auto px-6 py-8 min-h-screen flex flex-col justify-center">
+          <div className="max-w-4xl mx-auto text-center">
+            <div className="mb-12">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
+                DIGICHAMP
+              </h1>
+            </div>
+
+            <div className="mb-12">
+              <div className="flex justify-center mb-8">
+                <img src={state.passed ? successImg : failedImg} alt="Result" />
+              </div>
+
+              <h2 className="text-4xl font-bold text-gray-900 mb-4">
+                {state.passed ? 'Congratulations You Passed!' : "Failed This Attempt. Let's Try Again!"}
+              </h2>
+              <button onClick={toggleReviewMode} className="text-purple-950 hover:text-purple-700 font-medium">
+                Review Responses
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-md mx-auto">
+              <div className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center">
+                <div className="text-gray-600 mb-2">Your Score</div>
+                <div className={`text-3xl font-bold ${state.passed ? 'text-green-600' : 'text-red-600'}`}>
+                  {percentage}%
+                </div>
+                <div className="text-sm text-gray-500">Passing score 70%</div>
+              </div>
+              <div className="bg-white border-2 border-gray-200 rounded-xl p-6 text-center">
+                <div className="text-gray-600 mb-2">Your Points</div>
+                <div className={`text-3xl font-bold ${state.passed ? 'text-green-600' : 'text-red-600'}`}>
+                  {state.score}
+                </div>
+                <div className="text-sm text-gray-500">Passing points 70</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
 };
 
 export default Quiz;

@@ -71,18 +71,46 @@
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
-    }
-    
-    .topic-card {
+}
+
+.topic-card {
     transition: all 0.2s ease-in-out;
-    }
-    
-    .topic-card:hover {
+}
+
+.topic-card:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .topic-card.selected {
+}
+
+.topic-card.selected {
     background: linear-gradient(135deg, #e0c6f0 0%, #e0c6f0 100%);
     border: 2px solid #261649;
-    }
+}
+
+.answer-option {
+    transition: all 0.2s ease-in-out;
+}
+.answer-option:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+.answer-correct {
+    background: linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%);
+    border: 2px solid #16a34a !important;
+}
+.answer-wrong {
+    background: linear-gradient(135deg, #fef2f2 0%, #fecaca 100%);
+    border: 2px solid #dc2626 !important;
+}
+.answer-correct-highlight {
+    border: 3px solid #3b82f6 !important;
+    background: linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%);
+}
+.progress-bar {
+    transition: width 0.3s ease-in-out;
+}
+.timer-circle {
+    stroke-dasharray: 283;
+    stroke-dashoffset: 283;
+    transition: stroke-dashoffset 1s linear;
+}
