@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { base_url } from '../utils/apiFetch';
 import { useNavigate } from 'react-router-dom';
+import Chatbot from '../components/Chatbot';
 /* ----------  types  ---------- */
 interface Topic {
   id: number;               // quiz_id you’ll need for /quizzes/:id
@@ -49,6 +50,7 @@ const Topics: React.FC = () => {
 
   /* ================= RENDER ================= */
   return (
+    <>
     <div className="min-h-screen flex flex-col items-center px-6 py-10">
       <h1 className="mb-10 text-3xl font-bold bg-gradient-to-r from-purple-900 to-orange-400 bg-clip-text text-transparent">
         DIGICHAMP
@@ -96,6 +98,7 @@ const Topics: React.FC = () => {
         </>
       )}
     </div>
+</>
   );
 };
 
