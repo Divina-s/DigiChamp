@@ -21,8 +21,9 @@ class QuizSerializer(serializers.ModelSerializer):
         fields = ['id', 'title', 'questions']
 
 class TopicSerializer(serializers.ModelSerializer):
-    quizzes = QuizSerializer(many=True)  # no source needed if name matches related_name
+    quizzes = QuizSerializer(many=True, source='quiz_set')
 
     class Meta:
         model = Topic
         fields = ['id', 'name', 'quizzes']
+
