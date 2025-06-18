@@ -1,33 +1,5 @@
 from rest_framework import serializers
-from .models import Topic, Quiz, Question, Answer
-
-class AnswerSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Answer
-        fields = ['id', 'text']
-
-class QuestionSerializer(serializers.ModelSerializer):
-    answers = AnswerSerializer(many=True, source='answer_set')
-    class Meta:
-        model = Question
-        fields = ['id', 'text', 'answers']
-
-class QuizSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, source='question_set')
-    class Meta:
-        model = Quiz
-        fields = ['id', 'title', 'questions']
-
-class TopicSerializer(serializers.ModelSerializer):
-    quizzes = QuizSerializer(many=True, source='quiz_set')
-    class Meta:
-        model = Topic
-        fields = ['id', 'name', 'quizzes']
-
-
-# serializers.py
-from rest_framework import serializers
-from .models import Question, Option
+from .models import Topic, Quiz, Question, Option
 
 class OptionSerializer(serializers.ModelSerializer):
     class Meta:
@@ -40,3 +12,17 @@ class QuestionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Question
         fields = ['id', 'text', 'options']
+
+class QuizSerializer(serializers.ModelSerializer):
+    questions = QuestionSerializer(many=True, source='questions')  # using related_name='questions'
+
+    class Meta:
+        model = Quiz
+        fields = ['id', 'title', 'questions']
+
+class TopicSerializer(serializers.ModelSerializer):
+    quizzes = QuizSerializer(many=True, source='quiz_set')  # this is fine unless you added a related_name
+
+    class Meta:
+        model = Topic
+        fields = ['id', 'name', 'quizzes']
