@@ -38,45 +38,42 @@ class QuizDetailView(APIView):
         serializer = QuizSerializer(quiz)
         return Response(serializer.data)
 
+import logging
+logger = logging.getLogger(__name__)
+
 class SubmitSingleAnswerView(APIView):
-    permission_classes = [IsAuthenticated]
+    def post(self, request, question_id):
+        selected_option_id = request.data.get("selected_option_id")
+        logger.info(f"Selected Option ID: {selected_option_id}")
+        logger.info(f"Question ID: {question_id}")
 
-    def post(self, request):
-        user = request.user
-        question_id = request.data.get('question_id')
-        selected_option_id = request.data.get('selected_option_id')
-
-        if not question_id or not selected_option_id:
-            return Response({"error": "Question ID and selected option ID are required."}, status=400)
+        if selected_option_id is None:
+            return Response({"error": "Option ID not provided."}, status=400)
 
         try:
             question = Question.objects.get(id=question_id)
-            selected_option = Option.objects.get(id=selected_option_id, question=question)
         except Question.DoesNotExist:
+            logger.warning("Question not found.")
             return Response({"error": "Question not found."}, status=404)
+
+        try:
+            selected_option = question.options.get(id=selected_option_id)
         except Option.DoesNotExist:
-            return Response({"error": "Option not found for this question."}, status=404)
+            logger.warning("Invalid option for this question.")
+            return Response({"error": "Invalid option for this question."}, status=404)
 
-        # Save user's answer
-        Answer.objects.update_or_create(
-            user=user,
-            question=question,
-            defaults={'selected_option': selected_option}
-        )
-
-        # Check correctness
         is_correct = selected_option.is_correct
 
-        # Get the correct option(s) for this question to send back
-        correct_options = question.options.filter(is_correct=True)
-        correct_answers = [{"id": opt.id, "text": opt.text} for opt in correct_options]
+        # Save answer
+        Answer.objects.create(
+            question=question,
+            selected_option=selected_option,
+            is_correct=is_correct
+        )
 
-        return Response({
-            "question_id": question.id,
-            "is_correct": is_correct,
-            "correct_answers": correct_answers,
-            "message": "Correct!" if is_correct else "Incorrect.",
-        })
+        logger.info("Answer created successfully.")
+
+        return Response({"message": "Answer submitted successfully.", "is_correct": is_correct})
 
 from rest_framework.permissions import IsAuthenticated
 from .ai_tutor import ask_ai_tutor
