@@ -22,10 +22,16 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-zbg9(1^!p0!uh)acs+wjdrdn8=!=qne+5uo22^hg&^gc(tp3lv'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+import os
+DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
-ALLOWED_HOSTS = []
+
+ALLOWED_HOSTS = ["digichamp-backend.onrender.com", "localhost", "127.0.0.1"]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://digichamp-backend.onrender.com"
+]
+
 
 
 # Application definition
@@ -41,9 +47,11 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework.authtoken',
     'quiz',
+    'corsheaders',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -126,10 +134,11 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
-    ]
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
 }
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
@@ -137,10 +146,11 @@ EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 
 # Your Gmail address
-EMAIL_HOST_USER = 'divinamanye@gmail.com'
+EMAIL_HOST_USER = 'herblueprintafrica@gmail.com'
 
 # The 16-character app password generated from Google
-EMAIL_HOST_PASSWORD = 'f d k i f f u k w y h j x t n b'
+EMAIL_HOST_PASSWORD = 'mjfd eiqp qfbo itxn'
 
 DEFAULT_FROM_EMAIL = EMAIL_HOST_USER  # Optional but good practice
 
+CORS_ALLOW_ALL_ORIGINS = True  # Only for development/testing

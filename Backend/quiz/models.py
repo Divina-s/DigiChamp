@@ -23,7 +23,7 @@ class Quiz(models.Model):
         return f"{self.title} ({self.level})"
 
 class Question(models.Model):
-    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE)
+    quiz = models.ForeignKey(Quiz, on_delete=models.CASCADE, related_name='questions')
     text = models.TextField()
 
     def __str__(self):
