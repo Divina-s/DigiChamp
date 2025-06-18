@@ -14,14 +14,14 @@ class QuestionSerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'options']
 
 class QuizSerializer(serializers.ModelSerializer):
-    questions = QuestionSerializer(many=True, source='questions')  # using related_name='questions'
+    questions = QuestionSerializer(many=True)
 
     class Meta:
         model = Quiz
         fields = ['id', 'title', 'questions']
 
 class TopicSerializer(serializers.ModelSerializer):
-    quizzes = QuizSerializer(many=True, source='quiz_set')  # this is fine unless you added a related_name
+    quizzes = QuizSerializer(many=True)  # no source needed if name matches related_name
 
     class Meta:
         model = Topic
