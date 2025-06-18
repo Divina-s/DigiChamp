@@ -13,11 +13,21 @@ def get_level_from_score(score):
     else:
         return "Beginner"
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TopicsListView(APIView):
     def get(self, request):
-        topics = Topic.objects.all()
-        serializer = TopicSerializer(topics, many=True)
-        return Response(serializer.data)
+        try:
+            logger.info("Fetching all topics")
+            topics = Topic.objects.all()
+            serializer = TopicSerializer(topics, many=True)
+            logger.info(f"Serialized {len(serializer.data)} topics")
+            return Response(serializer.data)
+        except Exception as e:
+            logger.error(f"Error in TopicsListView: {e}")
+            return Response({"error": str(e)}, status=500)
 
 class QuizDetailView(APIView):
     def get(self, request, quiz_id):
