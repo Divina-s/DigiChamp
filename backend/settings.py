@@ -34,7 +34,7 @@ import os
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 
-ALLOWED_HOSTS = ["digichamp-backend.onrender.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ['*']
 
 CSRF_TRUSTED_ORIGINS = [
     "https://digichamp-backend.onrender.com"
