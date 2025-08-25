@@ -69,17 +69,17 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # DATABASE (Render/Neon)
 # -----------------------------
 # Make sure DATABASE_URL is set in Render environment variables
-from decouple import config, Csv
+import os
 import dj_database_url
 
+DATABASE_URL = os.environ.get("DATABASE_URL")
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is not set!")
+
 DATABASES = {
-    "default": dj_database_url.parse(
-        config("DATABASE_URL", default=None)
-    )
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
 }
 
-if DATABASES["default"] is None:
-    raise ValueError("DATABASE_URL environment variable not set!")
 
 # -----------------------------
 # PASSWORD VALIDATION
