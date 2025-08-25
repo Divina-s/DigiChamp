@@ -59,11 +59,11 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 # Database - always use DATABASE_URL
 DATABASES = {
-    "default": dj_database_url.config(
-        default="postgresql://neondb_owner:npg_6HeqYu5ibSdN@ep-patient-pond-adndhbii-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require"
+    'default': dj_database_url.parse(
+        os.environ.get('DATABASE_URL'),
+        conn_max_age=600,
     )
 }
-
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
