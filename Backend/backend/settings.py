@@ -71,8 +71,7 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # Make sure DATABASE_URL is set in Render environment variables
 DATABASES = {
     "default": dj_database_url.parse(
-        os.environ["DATABASE_URL"],
-        conn_max_age=600,
+        config("DATABASE_URL")  # reads safely from environment variables
     )
 }
 
