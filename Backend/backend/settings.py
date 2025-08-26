@@ -75,16 +75,16 @@ WSGI_APPLICATION = "backend.wsgi.application"
 import os
 import dj_database_url
 
-DATABASE_URL = os.environ.get("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError(
-        "DATABASE_URL environment variable not found! "
-        "Check Render environment variables."
-    )
+
 
 DATABASES = {
-    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600, ssl_require=True)
+    "default": dj_database_url.parse(
+        "postgresql://neondb_owner:npg_6HeqYu5ibSdN@ep-patient-pond-adndhbii-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        conn_max_age=600,
+        ssl_require=True
+    )
 }
+
 
 
 
