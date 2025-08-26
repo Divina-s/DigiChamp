@@ -13,6 +13,14 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import dj_database_url
 from decouple import config
+from pathlib import Path
+from decouple import Config, RepositoryEnv
+import dj_database_url
+
+# Force reading the .env file from the project root
+env_path = Path(__file__).resolve().parent.parent / ".env"
+config = Config(RepositoryEnv(env_path))
+
 
 
 
@@ -92,17 +100,22 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'postgres',
-        'USER': 'postgres',
-        'PASSWORD': 'mbelD123@',
-        'HOST': 'localhost',
-        'PORT': '5432',
-    }
-}
+import os
+import dj_database_url
 
+from decouple import config
+import dj_database_url
+
+
+import dj_database_url
+
+DATABASES = {
+    "default": dj_database_url.parse(
+        "postgresql://neondb_owner:npg_6HeqYu5ibSdN@ep-patient-pond-adndhbii-pooler.c-2.us-east-1.aws.neon.tech/neondb?sslmode=require&channel_binding=require",
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
