@@ -1,123 +1,72 @@
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import IsAuthenticated
-from .models import Topic, Quiz, Answer, UserLevel
-from .serializers import TopicSerializer, QuizSerializer
+import os
+import django
 
-def get_level_from_score(score):
-    if score >= 80:
-        return "Advanced"
-    elif score >= 50:
-        return "Intermediate"
-    else:
-        return "Beginner"
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'backend.settings')
+django.setup()
 
-class TopicsListView(APIView):
-    def get(self, request):
-        topics = Topic.objects.all()
-        serializer = TopicSerializer(topics, many=True)
-        return Response(serializer.data)
+from quiz.models import Topic, Quiz, Question, Option
 
-class QuizDetailView(APIView):
-    def get(self, request, quiz_id):
-        try:
-            quiz = Quiz.objects.get(id=quiz_id)
-        except Quiz.DoesNotExist:
-            return Response({"error": "Quiz not found"}, status=status.HTTP_404_NOT_FOUND)
-        serializer = QuizSerializer(quiz)
-        return Response(serializer.data)
+data = [
+    {
+        "topic": "Hardware Components and Their Functions",
+        "questions": [
+            {"question": "Which of these is the brain of the computer?",
+             "options": ["Keyboard", "Mouse", "CPU", "Monitor"], "answer": "CPU"},
+            {"question": "Which device is used to display information visually?",
+             "options": ["Scanner", "Monitor", "Printer", "Hard Drive"], "answer": "Monitor"},
+            {"question": "A mouse is mainly used for:",
+             "options": ["Input", "Output", "Storage", "Processing"], "answer": "Input"},
+            {"question": "Which device stores permanent data even when the computer is off?",
+             "options": ["RAM", "Hard Disk", "CPU", "Monitor"], "answer": "Hard Disk"},
+            {"question": "What does RAM stand for?",
+             "options": ["Random Access Memory", "Read Access Memory", "Read and Monitor", "Run Any Machine"], "answer": "Random Access Memory"},
+        ]
+    },
+    {
+        "topic": "Internet Safety and Security",
+        "questions": [
+            {"question": "A strong password should include:",
+             "options": ["Only your name", "Letters, numbers, and symbols", "Just numbers", "Only small letters"], "answer": "Letters, numbers, and symbols"},
+            {"question": "What is phishing?",
+             "options": ["Playing games online", "Sending fake messages to steal information", "Buying products on the internet", "A type of computer virus"], "answer": "Sending fake messages to steal information"},
+            {"question": "Which of these is safe online behavior?",
+             "options": ["Sharing your password with friends", "Using public Wi-Fi for banking", "Clicking on unknown links", "Using antivirus software"], "answer": "Using antivirus software"},
+            {"question": "What does HTTPS in a website address mean?",
+             "options": ["High Tech Password System", "Safe and Secure Website", "Hyper Text Transfer Protocol Secure", "Hidden Text Transfer Protocol"], "answer": "Hyper Text Transfer Protocol Secure"},
+            {"question": "Which of these is an example of personal information you should protect online?",
+             "options": ["Favorite color", "Date of birth", "Nickname", "Hobby"], "answer": "Date of birth"},
+        ]
+    },
+    # Add other topics similarly
+]
 
-class SubmitSingleAnswerView(APIView):
-    permission_classes = [IsAuthenticated]
+for topic_data in data:
+    topic_name = topic_data["topic"]
+    topic_obj, _ = Topic.objects.get_or_create(name=topic_name)
+    print(f"Topic: {topic_name}")
 
-    def post(self, request):
-        user = request.user
-        question_id = request.data.get('question_id')
-        selected_option_id = request.data.get('selected_option_id')
+    # Create or get beginner-level quiz
+    quiz_obj, _ = Quiz.objects.get_or_create(
+        topic=topic_obj,
+        title=f"{topic_name} Quiz",
+        defaults={"level": "beginner"}
+    )
+    print(f"Quiz: {quiz_obj.title} (Level: {quiz_obj.level})")
 
-        if not question_id or not selected_option_id:
-            return Response({"error": "Question ID and selected option ID are required."}, status=400)
-
-        try:
-            question = Question.objects.get(id=question_id)
-            selected_option = Option.objects.get(id=selected_option_id, question=question)
-        except Question.DoesNotExist:
-            return Response({"error": "Question not found."}, status=404)
-        except Option.DoesNotExist:
-            return Response({"error": "Option not found for this question."}, status=404)
-
-        # Save user's answer
-        Answer.objects.update_or_create(
-            user=user,
-            question=question,
-            defaults={'selected_option': selected_option}
+    for q in topic_data["questions"]:
+        question_text = q["question"]
+        question_obj, _ = Question.objects.get_or_create(
+            quiz=quiz_obj,
+            text=question_text
         )
+        print(f"Question: {question_text}")
 
-        # Check correctness
-        is_correct = selected_option.is_correct
-
-        # Get the correct option(s) for this question to send back
-        correct_options = question.options.filter(is_correct=True)
-        correct_answers = [{"id": opt.id, "text": opt.text} for opt in correct_options]
-
-        return Response({
-            "question_id": question.id,
-            "is_correct": is_correct,
-            "correct_answers": correct_answers,
-            "message": "Correct!" if is_correct else "Incorrect.",
-        })
-
-from rest_framework.permissions import IsAuthenticated
-from .ai_tutor import ask_ai_tutor
-from .models import Topic
-# Remove or fix this line in quiz/views.py
-from .models import Topic, Quiz ,UserLevel
-
-
-class AITutorView(APIView):
-    
-
-    def post(self, request):
-        question = request.data.get("question")
-        topic_id = request.data.get("topic_id")
-
-        if not question:
-            return Response({"error": "Question is required."}, status=400)
-
-        topic_name = None
-        if topic_id:
-            try:
-                topic = Topic.objects.get(id=topic_id)
-                topic_name = topic.name
-            except Topic.DoesNotExist:
-                pass
-
-        answer = ask_ai_tutor(question, topic_name)
-        return Response({"answer": answer})
-    
-# views.py
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from .models import Quiz, Question
-from .serializers import QuestionSerializer
-
-class QuizQuestionsByTopicAndLevel(APIView):
-    def get(self, request):
-        topic_id = request.GET.get('topic_id')
-        level = request.GET.get('level', '').lower()
-
-        if not topic_id or not level:
-            return Response({"error": "Topic ID and level are required."}, status=400)
-
-        try:
-            quiz = Quiz.objects.filter(topic_id=topic_id, level=level).first()
-            if not quiz:
-                return Response({"error": "No quiz found for this topic and level."}, status=404)
-
-            questions = quiz.questions.all()
-            serializer = QuestionSerializer(questions, many=True)
-            return Response(serializer.data)
-
-        except Exception as e:
-            return Response({"error": str(e)}, status=500)
+        for option_text in q["options"]:
+            is_correct = option_text == q["answer"]
+            # Ensure is_correct is updated if option already exists
+            option_obj, _ = Option.objects.update_or_create(
+                question=question_obj,
+                text=option_text,
+                defaults={'is_correct': is_correct}
+            )
+            print(f"Option: {option_text} (Correct: {is_correct})")
